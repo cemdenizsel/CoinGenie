@@ -9,7 +9,7 @@ import (
 )
 
 // NewServer creates a simple HTTP server with health and mentions endpoints.
-func NewServer(port string, secret string, h handlers.MentionsHandler) *http.Server {
+func NewServer(port string, h handlers.MentionsHandler) *http.Server {
 	r := chi.NewRouter()
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {

@@ -21,9 +21,7 @@ func main() {
 	bearerToken := os.Getenv("X_BEARER_TOKEN")
 	baseURL := getEnv("X_BASE", "https://api.twitter.com/2")
 
-	if webhookSecret == "" {
-		log.Fatal("WEBHOOK_SECRET is required")
-	}
+	// WEBHOOK_SECRET is optional; if empty, the handler won't enforce it.
 	if agentCmd == "" {
 		if mcpCmd == "" {
 			log.Fatal("MCP_CMD is required (path to CoinGecko MCP server binary)")
@@ -44,7 +42,7 @@ func main() {
 		handler.Reply = reply
 	}
 
-	srv := httpserver.NewServer(port, webhookSecret, handler)
+	srv := httpserver.NewServer(port, handler)
 	log.Printf("cg-mentions-bot listening on :%s", port)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("server error: %v", err)
