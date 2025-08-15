@@ -144,6 +144,52 @@ Response format:
 - POST `/2/tweets` with body `{ "text": "...", "reply": { "in_reply_to_tweet_id": "..." } }`.
 - If posting fails, the error string is returned in the `results` array and processing continues.
 
+## X MCP (post replies) — HTTP
+```bash
+# OAuth2 bearer (user-context)
+PORT=8081 X_BEARER_TOKEN="YOUR_ACCESS_TOKEN" ./xmcp
+
+# Or OAuth1 (app perms: Read and Write; OAuth 1.0a enabled)
+export X_AUTH_MODE=oauth1
+export X_CONSUMER_KEY=...
+export X_CONSUMER_SECRET=...
+export X_ACCESS_TOKEN=...
+export X_ACCESS_SECRET=...
+PORT=8081 ./xmcp
+
+# Test
+curl -s http://localhost:8081/mcp -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"0.1.0"}}}'
+curl -s http://localhost:8081/mcp -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+curl -s http://localhost:8081/mcp -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"twitter.post_reply","arguments":{"in_reply_to_tweet_id":"<tweet_id>","text":"hello from XMCP"}}}'
+```
+
+## CoinGecko MCP HTTP proxy (cgproxy)
+Expose CoinGecko MCP server as an HTTP MCP endpoint so agents can call it directly.
+```bash
+# Public keyless (SSE remote bridged to HTTP)
+export CG_MCP_CMD="npx"
+export CG_MCP_ARGS="mcp-remote https://mcp.api.coingecko.com/sse"
+PORT=8082 ./cgproxy
+
+# Or local server (Demo/Pro)
+export CG_MCP_CMD="npx"
+export CG_MCP_ARGS="-y @coingecko/coingecko-mcp"
+export COINGECKO_DEMO_API_KEY=YOUR_DEMO_KEY
+export COINGECKO_ENVIRONMENT=demo
+PORT=8082 ./cgproxy
+
+# Test
+curl -s http://localhost:8082/mcp -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"0.1.0"}}}'
+curl -s http://localhost:8082/mcp -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+curl -s http://localhost:8082/mcp -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_simple_price","arguments":{"ids":"bitcoin","vs_currencies":"usd"}}}'
+```
+
 ## Troubleshooting
 - `request failed` from MCP:
   - Use the local MCP server with a Demo/Pro key.
