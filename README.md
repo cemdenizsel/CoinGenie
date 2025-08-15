@@ -1,4 +1,4 @@
-# cg-mentions-bot
+# CoinGecko Mentions Bot
 
 > ⚡️ What this is (at a glance)
 >
