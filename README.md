@@ -64,6 +64,7 @@ References:
 
 ## n8n integration (mentions for @NexArb_)
 - n8n periodically searches for mentions of the `@NexArb_` account (e.g., via Twitter API or an n8n Twitter node/HTTP node).
+- The workflow currently runs every 6 hours (configurable in n8n).
 - When a new batch of mentions is found, n8n POSTs the mentions to this service at:
   - `POST http://<ec2-ip-or-host>:8080/mentions`
   - Headers: `Content-Type: application/json` (no auth header required unless you set `WEBHOOK_SECRET`).
