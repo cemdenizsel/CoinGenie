@@ -16,6 +16,8 @@ type MentionsHandler struct {
 	Secret string
 	Ask    func(ctx context.Context, text string) (string, error)
 	Reply  func(ctx context.Context, in ReplyIn) error
+	// If set, uses the agent binary to both answer and post per mention.
+	AgentRun func(ctx context.Context, question string, replyTo string) (string, error)
 }
 
 // ReplyIn contains minimal info to reply to a tweet.
@@ -24,9 +26,9 @@ type ReplyIn struct {
 	Text      string
 }
 
-// Handle verifies secret, processes mentions, and returns a summary.
+// Handle verifies secret (if configured), processes mentions, and returns a summary.
 func (h MentionsHandler) Handle(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("X-Webhook-Secret") != h.Secret {
+	if h.Secret != "" && r.Header.Get("X-Webhook-Secret") != h.Secret {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -74,6 +76,15 @@ func (h MentionsHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	for _, m := range mentions {
 		q := normalizeTweetText(m.Text)
+		if h.AgentRun != nil {
+			if _, err := h.AgentRun(r.Context(), q, m.TweetID); err != nil {
+				results = append(results, res{TweetID: m.TweetID, Posted: false, Error: err.Error()})
+			} else {
+				results = append(results, res{TweetID: m.TweetID, Posted: true})
+			}
+			continue
+		}
+
 		ans, err := h.Ask(r.Context(), q)
 		if err != nil {
 			results = append(results, res{TweetID: m.TweetID, Posted: false, Error: err.Error()})

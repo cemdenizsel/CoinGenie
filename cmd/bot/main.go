@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"cg-mentions-bot/internal/agent"
 	"cg-mentions-bot/internal/cg"
 	"cg-mentions-bot/internal/handlers"
 	"cg-mentions-bot/internal/httpserver"
@@ -14,6 +15,7 @@ import (
 func main() {
 	port := getEnv("PORT", "8080")
 	webhookSecret := os.Getenv("WEBHOOK_SECRET")
+	agentCmd := os.Getenv("AGENT_CMD")
 	mcpCmd := os.Getenv("MCP_CMD")
 	mcpTool := getEnv("MCP_TOOL", "coingecko.answer")
 	bearerToken := os.Getenv("X_BEARER_TOKEN")
@@ -22,20 +24,24 @@ func main() {
 	if webhookSecret == "" {
 		log.Fatal("WEBHOOK_SECRET is required")
 	}
-	if mcpCmd == "" {
-		log.Fatal("MCP_CMD is required (path to CoinGecko MCP server binary)")
-	}
-	if bearerToken == "" {
-		log.Fatal("X_BEARER_TOKEN is required (user-context token with tweet.write)")
+	if agentCmd == "" {
+		if mcpCmd == "" {
+			log.Fatal("MCP_CMD is required (path to CoinGecko MCP server binary)")
+		}
+		if bearerToken == "" {
+			log.Fatal("X_BEARER_TOKEN is required (user-context token with tweet.write)")
+		}
 	}
 
 	ask := cg.NewAsker(mcpCmd, mcpTool)
 	reply := twitter.NewPoster(baseURL, bearerToken)
 
-	handler := handlers.MentionsHandler{
-		Secret: webhookSecret,
-		Ask:    ask,
-		Reply:  reply,
+	handler := handlers.MentionsHandler{Secret: webhookSecret}
+	if agentCmd != "" {
+		handler.AgentRun = agent.NewRunner(agentCmd)
+	} else {
+		handler.Ask = ask
+		handler.Reply = reply
 	}
 
 	srv := httpserver.NewServer(port, webhookSecret, handler)
