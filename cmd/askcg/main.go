@@ -68,18 +68,22 @@ func getEnv(k, def string) string {
 }
 
 func listTools(ctx context.Context, mcpCmd string) error {
-	c, err := mcpclient.NewStdioMCPClient(mcpCmd)
+	c, err := mcpclient.NewStdioMCPClient(mcpCmd, nil)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
-	if _, err := c.Initialize(ctx, mcp.ClientCapabilities{}, mcp.Implementation{
-		Name:    "cg-mentions-bot",
-		Version: "0.1.0",
-	}, "2024-11-05"); err != nil {
+	if _, err := c.Initialize(ctx, mcp.InitializeRequest{
+		Request: mcp.Request{Method: string(mcp.MethodInitialize)},
+		Params: mcp.InitializeParams{
+			ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
+			Capabilities:    mcp.ClientCapabilities{},
+			ClientInfo:      mcp.Implementation{Name: "cg-mentions-bot", Version: "0.1.0"},
+		},
+	}); err != nil {
 		return err
 	}
-	lt, err := c.ListTools(ctx, nil)
+	lt, err := c.ListTools(ctx, mcp.ListToolsRequest{})
 	if err != nil {
 		return err
 	}
@@ -93,15 +97,19 @@ func listTools(ctx context.Context, mcpCmd string) error {
 }
 
 func callTool(ctx context.Context, mcpCmd string, tool string, argsJSON string) error {
-	c, err := mcpclient.NewStdioMCPClient(mcpCmd)
+	c, err := mcpclient.NewStdioMCPClient(mcpCmd, nil)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
-	if _, err := c.Initialize(ctx, mcp.ClientCapabilities{}, mcp.Implementation{
-		Name:    "cg-mentions-bot",
-		Version: "0.1.0",
-	}, "2024-11-05"); err != nil {
+	if _, err := c.Initialize(ctx, mcp.InitializeRequest{
+		Request: mcp.Request{Method: string(mcp.MethodInitialize)},
+		Params: mcp.InitializeParams{
+			ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
+			Capabilities:    mcp.ClientCapabilities{},
+			ClientInfo:      mcp.Implementation{Name: "cg-mentions-bot", Version: "0.1.0"},
+		},
+	}); err != nil {
 		return err
 	}
 	var args map[string]interface{}
@@ -110,7 +118,10 @@ func callTool(ctx context.Context, mcpCmd string, tool string, argsJSON string) 
 			return fmt.Errorf("invalid -args JSON: %w", err)
 		}
 	}
-	res, err := c.CallTool(ctx, tool, args)
+	res, err := c.CallTool(ctx, mcp.CallToolRequest{
+		Request: mcp.Request{Method: string(mcp.MethodToolsCall)},
+		Params:  mcp.CallToolParams{Name: tool, Arguments: args},
+	})
 	if err != nil {
 		return err
 	}

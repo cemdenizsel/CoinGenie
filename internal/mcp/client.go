@@ -3,6 +3,8 @@ package mcpclient
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 	"strings"
 
 	mcpclient "github.com/mark3labs/mcp-go/client"
@@ -18,21 +20,34 @@ func Ask(ctx context.Context, mcpCmd string, tool string, prompt string) (string
 // Call initializes the MCP client and calls a tool with arbitrary arguments,
 // returning concatenated text content.
 func Call(ctx context.Context, mcpCmd string, tool string, args map[string]interface{}) (string, error) {
-	c, err := mcpclient.NewStdioMCPClient(mcpCmd)
+	c, err := mcpclient.NewStdioMCPClient(mcpCmd, os.Environ())
 	if err != nil {
 		return "", err
 	}
 	defer c.Close()
 
-	_, err = c.Initialize(ctx, mcp.ClientCapabilities{}, mcp.Implementation{
-		Name:    "cg-mentions-bot",
-		Version: "0.1.0",
-	}, "2024-11-05")
+	_, err = c.Initialize(ctx, mcp.InitializeRequest{
+		Request: mcp.Request{Method: string(mcp.MethodInitialize)},
+		Params: mcp.InitializeParams{
+			ProtocolVersion: mcp.LATEST_PROTOCOL_VERSION,
+			Capabilities:    mcp.ClientCapabilities{},
+			ClientInfo: mcp.Implementation{
+				Name:    "cg-mentions-bot",
+				Version: "0.1.0",
+			},
+		},
+	})
 	if err != nil {
 		return "", err
 	}
 
-	res, err := c.CallTool(ctx, tool, args)
+	res, err := c.CallTool(ctx, mcp.CallToolRequest{
+		Request: mcp.Request{Method: string(mcp.MethodToolsCall)},
+		Params: mcp.CallToolParams{
+			Name:      tool,
+			Arguments: args,
+		},
+	})
 	if err != nil {
 		return "", err
 	}
@@ -42,18 +57,13 @@ func Call(ctx context.Context, mcpCmd string, tool string, args map[string]inter
 
 	var parts []string
 	for _, item := range res.Content {
-		if tc, ok := item.(mcp.TextContent); ok {
-			if tc.Text != "" {
-				parts = append(parts, tc.Text)
+		switch v := item.(type) {
+		case mcp.TextContent:
+			if v.Text != "" {
+				parts = append(parts, v.Text)
 			}
-			continue
-		}
-		if m, ok := item.(map[string]interface{}); ok {
-			if m["type"] == "text" {
-				if s, _ := m["text"].(string); s != "" {
-					parts = append(parts, s)
-				}
-			}
+		default:
+			_ = fmt.Sprintf("ignored non-text content: %T", v)
 		}
 	}
 	if len(parts) == 0 {
